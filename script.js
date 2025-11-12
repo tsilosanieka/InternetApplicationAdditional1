@@ -1,30 +1,23 @@
-// Import necessary libraries
-const axios = require('axios'); // For making HTTP requests
-const { JSDOM, VirtualConsole } = require('jsdom'); // Import VirtualConsole
-const robotsParser = require('robots-parser'); // For checking robots.txt
-const url = require('url'); // For resolving relative URLs
+const axios = require('axios'); 
+const { JSDOM, VirtualConsole } = require('jsdom'); 
+const robotsParser = require('robots-parser');
+const url = require('url');
 
-// Configuration
 const USER_AGENT = 'MyAssignmentScraper/1.0';
 const START_URL = 'https://pcshop.ge/product-category/pc-hardware/ssd/?ep_filter_pa_brand=samsung';
 const ROBOTS_URL = 'https://pcshop.ge/robots.txt';
 
-// We create a virtual console that ignores CSS Error events since we don't need it
-// This will hide the "Could not parse CSS stylesheet" warnings for better output
 const virtualConsole = new VirtualConsole();
 virtualConsole.on("cssError", () => {
 });
 
-// Helper Functions
 
-// Parses the price string into a number
 function parsePrice(priceString) {
   if (!priceString) return null;
   const cleanedString = priceString.replace('₾', '').replace(',', '').split('.')[0].trim();
   return parseInt(cleanedString, 10);
 }
 
-// Extracts capacity in GB from the product name.
 function getCapacityInGB(name) {
   if (!name) return null;
   const match = name.match(/(\d+)\s*(TB|GB)/i);
@@ -41,14 +34,9 @@ function getCapacityInGB(name) {
   return null;
 }
 
-// Main Scraper Function
-
-// Main function to control the scraping process.
-// It checks robots.txt, then loops through all pages (pagination).
 
 async function mainScraper() {
   try {
-    // Check robots.txt (Ethical Scraping to not violate any law)
     console.log(`Checking robots.txt at: ${ROBOTS_URL}`);
 
     const { data: robotsFile } = await axios.get(ROBOTS_URL);
@@ -62,7 +50,6 @@ async function mainScraper() {
     }
     console.log('Scraping is allowed. Proceeding...');
 
-    // Scrape all pages using pagination
 
     let currentUrl = START_URL;
     const allProcessedProducts = [];
@@ -74,13 +61,10 @@ async function mainScraper() {
       const { data: html } = await axios.get(currentUrl, {
         headers: { 'User-Agent': USER_AGENT }
       });
-
-      // JSDOM Initialization with the virtual console
-      // We pass the virtualConsole here to suppress the warnings about CSS errors
+      
       const dom = new JSDOM(html, { virtualConsole: virtualConsole });
       const document = dom.window.document;
 
-      // Find all product elements on the current page
       const productElements = document.querySelectorAll('li.product');
       console.log(`Found ${productElements.length} product elements on this page.`);
 
@@ -91,7 +75,6 @@ async function mainScraper() {
 
       let productsOnThisPage = 0;
 
-      // Process each product on the page
       productElements.forEach((element) => {
         const nameElement = element.querySelector('h2.woocommerce-loop-product__title');
         const priceElement = element.querySelector('span.woocommerce-Price-amount bdi');
@@ -116,8 +99,6 @@ async function mainScraper() {
       });
       console.log(`Successfully processed ${productsOnThisPage} valid products.`);
 
-      // Find the "Next Page" (if it exists) link to continue the loop
-      // But in this case, there is only one page
       const nextLinkElement = document.querySelector('a.next.page-numbers');
 
       if (nextLinkElement) {
@@ -128,8 +109,6 @@ async function mainScraper() {
         currentUrl = null; 
       }
     }
-
-    //Sort and Print Final Results
 
     console.log(`\nTotal products processed from all ${pageCount} page(s): ${allProcessedProducts.length}`);
 
@@ -157,5 +136,6 @@ async function mainScraper() {
     console.error('An error occurred during the scraping process:', error.message);
   }
 }
+
 
 mainScraper();
